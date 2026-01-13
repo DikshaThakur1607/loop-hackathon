@@ -1,0 +1,311 @@
+// This is your Prisma schema file,
+// learn more about it in the docs: https://pris.ly/d/prisma-schema
+
+generator client {
+  provider = "prisma-client"
+  output   = "../generated/prisma"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+// Enums
+enum VerificationStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum SubmissionStatus {
+  NOT_SUBMITTED
+  SUBMITTED
+  LATE_SUBMITTED
+}
+
+enum EvaluationStatus {
+  PENDING
+  SHORTLISTED
+  REJECTED
+}
+
+enum PaymentStatus {
+  NOT_INVITED
+  INVITED
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+enum CommunicationType {
+  EMAIL
+  SMS
+  WHATSAPP
+}
+
+enum CommunicationStatus {
+  QUEUED
+  SENT
+  DELIVERED
+  FAILED
+  BOUNCED
+}
+
+// Models
+model Team {
+  id             String             @id @default(uuid())
+  unstopTeamId   String             @unique
+  teamName       String
+  collegeName    String
+  teamSize       Int
+  
+  // State Management
+  verificationStatus VerificationStatus @default(PENDING)
+  submissionStatus   SubmissionStatus   @default(NOT_SUBMITTED)
+  evaluationStatus   EvaluationStatus   @default(PENDING)
+  paymentStatus      PaymentStatus      @default(NOT_INVITED)
+  
+  // Timestamps
+  createdAt      DateTime  @default(now())
+  updatedAt      DateTime  @updatedAt
+  verifiedAt     DateTime?
+  submittedAt    DateTime?
+  evaluatedAt    DateTime?
+  paymentCompletedAt DateTime?
+  
+  // Metadata
+  lastSyncAt     DateTime?
+  metadata       Json?
+  
+  // Relations
+  members        TeamMember[]
+  submissions    Submission[]
+  evaluations    Evaluation[]
+  payments       Payment[]
+  communications CommunicationLog[]
+  
+  @@index([verificationStatus])
+  @@index([submissionStatus])
+  @@index([unstopTeamId])
+}
+
+model TeamMember {
+  id             String   @id @default(uuid())
+  teamId         String
+  unstopMemberId String?
+  
+  fullName       String
+  email          String
+  phone          String
+  collegeName    String?
+  degree         String?
+  yearOfStudy    Int?
+  
+  isLeader       Boolean  @default(false)
+  
+  createdAt      DateTime @default(now())
+  updatedAt      DateTime @updatedAt
+  
+  // Relations
+  team           Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  communications CommunicationLog[]
+  
+  @@index([teamId])
+  @@index([isLeader])
+  @@index([email])
+  @@index([phone])
+}
+
+model Submission {
+  id                  String   @id @default(uuid())
+  teamId              String
+  
+  pptUrl              String?
+  prototypeUrl        String?
+  videoUrl            String?
+  githubRepo          String?
+  
+  problemStatementId  Int?
+  description         String?  @db.Text
+  
+  submittedAt         DateTime @default(now())
+  lastModifiedAt      DateTime @updatedAt
+  
+  // Validation
+  isComplete          Boolean  @default(false)
+  validationErrors    Json?
+  
+  // Relations
+  team                Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  evaluations         Evaluation[]
+  
+  @@index([teamId])
+}
+
+model Evaluation {
+  id                         String   @id @default(uuid())
+  teamId                     String
+  submissionId               String
+  judgeId                    String?
+  
+  // Scores (0-10)
+  innovationScore            Decimal?  @db.Decimal(3, 1)
+  technicalComplexityScore   Decimal?  @db.Decimal(3, 1)
+  practicalRelevanceScore    Decimal?  @db.Decimal(3, 1)
+  presentationQualityScore   Decimal?  @db.Decimal(3, 1)
+  
+  totalScore                 Decimal?  @db.Decimal(4, 1)
+  rank                       Int?
+  
+  comments                   String?   @db.Text
+  isShortlisted              Boolean   @default(false)
+  
+  evaluatedAt                DateTime  @default(now())
+  
+  // Relations
+  team                       Team      @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  submission                 Submission @relation(fields: [submissionId], references: [id], onDelete: Cascade)
+  
+  @@index([teamId])
+  @@index([isShortlisted])
+  @@index([rank])
+}
+
+model Payment {
+  id                      String   @id @default(uuid())
+  teamId                  String
+  
+  paymentToken            String   @unique
+  amount                  Decimal  @default(400.00) @db.Decimal(10, 2)
+  currency                String   @default("INR")
+  
+  // Payment Gateway
+  gateway                 String?
+  gatewayOrderId          String?
+  gatewayPaymentId        String?
+  gatewaySignature        String?
+  
+  // Status
+  status                  String   @default("INITIATED")
+  
+  // Availability Confirmation
+  availabilityConfirmed   Boolean  @default(false)
+  availabilityConfirmedAt DateTime?
+  
+  // Timestamps
+  initiatedAt             DateTime @default(now())
+  completedAt             DateTime?
+  failedAt                DateTime?
+  
+  // Metadata
+  failureReason           String?  @db.Text
+  metadata                Json?
+  
+  // Relations
+  team                    Team     @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  
+  @@index([teamId])
+  @@index([paymentToken])
+  @@index([status])
+}
+
+model CommunicationLog {
+  id                String              @id @default(uuid())
+  teamId            String
+  memberId          String?
+  
+  // Communication Details
+  type              CommunicationType
+  templateName      String
+  subject           String?
+  content           String              @db.Text
+  
+  // Recipients
+  recipientEmail    String?
+  recipientPhone    String?
+  
+  // Status
+  status            CommunicationStatus @default(QUEUED)
+  
+  // Provider Details
+  provider          String?
+  providerMessageId String?
+  
+  // Timestamps
+  queuedAt          DateTime            @default(now())
+  sentAt            DateTime?
+  deliveredAt       DateTime?
+  failedAt          DateTime?
+  
+  // Metadata
+  errorMessage      String?             @db.Text
+  metadata          Json?
+  
+  // Relations
+  team              Team                @relation(fields: [teamId], references: [id], onDelete: Cascade)
+  member            TeamMember?         @relation(fields: [memberId], references: [id], onDelete: Cascade)
+  
+  @@index([teamId])
+  @@index([type])
+  @@index([status])
+}
+
+model SyncJob {
+  id              String   @id @default(uuid())
+  
+  jobType         String
+  status          String   @default("RUNNING")
+  
+  // Metrics
+  totalRecords    Int      @default(0)
+  newRecords      Int      @default(0)
+  updatedRecords  Int      @default(0)
+  failedRecords   Int      @default(0)
+  
+  // Timestamps
+  startedAt       DateTime @default(now())
+  completedAt     DateTime?
+  
+  // Error Tracking
+  errorMessage    String?  @db.Text
+  errorDetails    Json?
+  
+  @@index([jobType])
+  @@index([status])
+}
+
+// Call Status Enum
+enum CallStatus {
+  NOT_CALLED
+  CALLED_WILL_VERIFY    // Team said they will verify soon
+  CALLED_NOT_PICKED     // Team didn't pick up
+  CALLED_REJECTED       // Team rejected / not interested
+  BEING_CALLED          // Someone is currently calling (lock)
+}
+
+// Call Log Model for multi-user coordination
+model CallLog {
+  id              String      @id @default(uuid())
+  teamId          String      @unique
+  
+  // Call Status
+  callStatus      CallStatus  @default(NOT_CALLED)
+  
+  // Who is handling this team
+  calledBy        String?     // Name/ID of the person who called
+  lockedBy        String?     // Name/ID of person currently calling (for coordination)
+  lockedAt        DateTime?   // When the lock was acquired
+  
+  // Notes
+  notes           String?     @db.Text
+  
+  // Timestamps
+  lastCalledAt    DateTime?
+  createdAt       DateTime    @default(now())
+  updatedAt       DateTime    @updatedAt
+  
+  @@index([teamId])
+  @@index([callStatus])
+  @@index([lockedBy])
+}
+
