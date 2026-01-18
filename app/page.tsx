@@ -221,12 +221,11 @@ export default function Dashboard() {
       <StatsCards stats={stats} isLoading={isLoading} />
 
       {/* Tabs */}
-      import { TeamStats } from '@/types';
       <DashboardTabs
         tabs={tabs}
         activeTab={activeTab}
         setActiveTab={setActiveTab}
-        stats: TeamStats | null;   // ✅ ADD THIS
+        stats={stats}
         skippedRows={skippedRows}
         callerName={callerName}
         onCallClick={handleCallTabClick}
@@ -253,6 +252,7 @@ export default function Dashboard() {
         {activeTab === 'unverified' && (
           <PendingTab
             teams={filteredUnverifiedTeams}
+            isLoading={isLoading} // <--- This fulfills the requirement in PendingTabProps
             onExport={() => handleExport('PENDING')}
             onRefresh={fetchData}
           />
@@ -285,4 +285,4 @@ export default function Dashboard() {
       </div>
     </footer>
   </div>
-);
+)};

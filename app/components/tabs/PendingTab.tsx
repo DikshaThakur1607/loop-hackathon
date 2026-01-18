@@ -8,14 +8,14 @@ interface PendingTabProps {
   teams: UnverifiedTeam[];
   isLoading: boolean;
   onExport: () => void;
-  onEmailsSent: () => void;
+  onRefresh: () => Promise<void>; // Add this line
 }
 
 export default function PendingTab({
   teams,
   isLoading,
   onExport,
-  onEmailsSent,
+  onRefresh,
 }: PendingTabProps) {
   return (
     <div>
@@ -32,7 +32,7 @@ export default function PendingTab({
         <div className="flex items-center gap-3">
           <BulkEmailButton
             unverifiedCount={teams.length}
-            onEmailsSent={onEmailsSent}
+            onEmailsSent={onRefresh}
           />
 
           <button

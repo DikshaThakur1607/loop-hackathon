@@ -1,6 +1,7 @@
 'use client';
 
 import { Search, User } from 'lucide-react';
+import type { TeamStats } from '@/lib/api';
 
 type TabType =
   | 'upload'
@@ -20,6 +21,7 @@ interface DashboardTabsProps {
   tabs: Tab[];
   activeTab: TabType;
   setActiveTab: (tab: TabType) => void;
+  stats: TeamStats | null;
   skippedRows: any[];
   callerName: string;
   onCallClick: () => void;
