@@ -1,7 +1,7 @@
 'use client';
 
 import { Search, User } from 'lucide-react';
-import type { TeamStats } from '@/lib/api';
+import type { TeamStats } from '../lib/api';
 
 type TabType =
   | 'upload'

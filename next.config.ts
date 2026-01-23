@@ -2,14 +2,8 @@ import type { NextConfig } from "next";
 
 const nextConfig: NextConfig = {
   output: "standalone",
-  // Exclude Backend folder from build
-  webpack: (config) => {
-    config.watchOptions = {
-      ...config.watchOptions,
-      ignored: ['**/Backend/**', '**/node_modules/**'],
-    };
-    return config;
-  },
+  // Empty turbopack config to silence the webpack warning
+  turbopack: {},
 };
 
 export default nextConfig;
