@@ -2,6 +2,7 @@
 
 # ================================================
 # Loop Hackathon Frontend - Azure Container Registry Deployment
+# Supports Apple Silicon (M1/M2/M3) and Intel Macs
 # ================================================
 
 # Configuration - REPLACE THESE VALUES
@@ -13,8 +14,21 @@ API_URL="https://loop-hackathon-api-prod-rudra.onrender.com"  # Your backend URL
 # Full image name
 FULL_IMAGE="${ACR_NAME}.azurecr.io/${IMAGE_NAME}:${TAG}"
 
+# Detect architecture and set platform
+ARCH=$(uname -m)
+if [ "$ARCH" = "arm64" ]; then
+  echo "🍎 Detected Apple Silicon (arm64)"
+  PLATFORM="linux/amd64"  # Build for amd64 to deploy on Azure/cloud
+  echo "   Building for platform: ${PLATFORM} (for cloud deployment)"
+else
+  echo "💻 Detected Intel architecture"
+  PLATFORM="linux/amd64"
+fi
+
+echo ""
 echo "🚀 Building Docker image..."
 docker build \
+  --platform ${PLATFORM} \
   --build-arg NEXT_PUBLIC_API_URL=${API_URL} \
   -t ${IMAGE_NAME}:${TAG} \
   -t ${FULL_IMAGE} \
