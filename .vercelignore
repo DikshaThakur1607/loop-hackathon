@@ -1,0 +1,3 @@
+# Vercel ignore - exclude these from deployment
+Backend/
+Backend/**
